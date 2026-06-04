@@ -69,6 +69,20 @@ public interface TweetRepository extends JpaRepository<Tweet, UUID> {
 
     @Query("SELECT new com.twitterclone.backend.dto.TweetResponse(" +
            "t.id, t.content, t.author.id, t.author.username, t.author.avatarPlaceholder, t.createdAt, " +
+           "(SELECT COUNT(lk) FROM Like lk WHERE lk.tweet.id = t.id), " +
+           "CASE WHEN (SELECT COUNT(lk) FROM Like lk WHERE lk.tweet.id = t.id AND lk.user.id = :currentUserId) > 0 THEN true ELSE false END, " +
+           "t.replyCount, t.parentTweet.id) " +
+           "FROM Like l JOIN l.tweet t " +
+           "WHERE l.user.id = :userId " +
+           "ORDER BY l.createdAt DESC")
+    Page<TweetResponse> findUserLikedTweets(
+            @Param("userId") UUID userId,
+            @Param("currentUserId") UUID currentUserId,
+            Pageable pageable
+    );
+
+    @Query("SELECT new com.twitterclone.backend.dto.TweetResponse(" +
+           "t.id, t.content, t.author.id, t.author.username, t.author.avatarPlaceholder, t.createdAt, " +
            "(SELECT COUNT(l) FROM Like l WHERE l.tweet.id = t.id), " +
            "CASE WHEN (SELECT COUNT(l) FROM Like l WHERE l.tweet.id = t.id AND l.user.id = :currentUserId) > 0 THEN true ELSE false END, " +
            "t.replyCount, t.parentTweet.id) " +

@@ -41,12 +41,17 @@ public class AuthController {
             return ResponseEntity.badRequest().body("El email ya está registrado");
         }
 
+        String avatar = request.getAvatarPlaceholder() != null ? request.getAvatarPlaceholder().trim() : null;
+        if (avatar != null && avatar.isEmpty()) {
+            avatar = null;
+        }
+
         User user = User.builder()
                 .email(request.getEmail())
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .bio(request.getBio())
-                .avatarPlaceholder(request.getAvatarPlaceholder())
+                .avatarPlaceholder(avatar)
                 .roles(Set.of(Role.USER))
                 .build();
 

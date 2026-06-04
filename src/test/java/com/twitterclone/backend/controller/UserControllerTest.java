@@ -1,21 +1,25 @@
 package com.twitterclone.backend.controller;
 
+import com.twitterclone.backend.dto.UpdateProfileRequest;
 import com.twitterclone.backend.model.Role;
 import com.twitterclone.backend.model.User;
 import com.twitterclone.backend.repository.FollowRepository;
 import com.twitterclone.backend.repository.UserRepository;
 import com.twitterclone.backend.security.JwtService;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Set;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -26,6 +30,9 @@ class UserControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Autowired
     private UserRepository userRepository;
@@ -161,5 +168,89 @@ class UserControllerTest {
                         .header("Authorization", "Bearer " + mainUserToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].username").value("specialname"));
+    }
+
+    @Test
+    void updateProfile_whenValid_shouldUpdateUserData() throws Exception {
+        UpdateProfileRequest request = UpdateProfileRequest.builder()
+                .username("newmainname")
+                .email("newmain@example.com")
+                .bio("New Bio")
+                .avatarPlaceholder("preset1")
+                .bannerPlaceholder("preset2")
+                .showEmail(false)
+                .build();
+
+        mockMvc.perform(put("/api/users/profile")
+                        .header("Authorization", "Bearer " + mainUserToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("newmainname"))
+                .andExpect(jsonPath("$.email").value("newmain@example.com"))
+                .andExpect(jsonPath("$.bio").value("New Bio"))
+                .andExpect(jsonPath("$.avatarPlaceholder").value("preset1"))
+                .andExpect(jsonPath("$.bannerPlaceholder").value("preset2"))
+                .andExpect(jsonPath("$.showEmail").value(false));
+
+        User updatedUser = userRepository.findById(mainUser.getId()).orElseThrow();
+        assertEquals("newmainname", updatedUser.getUsername());
+        assertEquals("newmain@example.com", updatedUser.getEmail());
+        assertEquals("New Bio", updatedUser.getBio());
+        assertEquals("preset1", updatedUser.getAvatarPlaceholder());
+        assertEquals("preset2", updatedUser.getBannerPlaceholder());
+        assertFalse(updatedUser.isShowEmail());
+    }
+
+    @Test
+    void updateProfile_whenUsernameOrEmailDuplicated_shouldReturnBadRequest() throws Exception {
+        // Try to update mainUser to have otherUser's username
+        UpdateProfileRequest requestDuplicatedUsername = UpdateProfileRequest.builder()
+                .username("otheruser")
+                .email("main@example.com")
+                .bio("Dup user")
+                .avatarPlaceholder("preset1")
+                .bannerPlaceholder("preset2")
+                .build();
+
+        mockMvc.perform(put("/api/users/profile")
+                        .header("Authorization", "Bearer " + mainUserToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDuplicatedUsername)))
+                .andExpect(status().isBadRequest());
+
+        // Try to update mainUser to have otherUser's email
+        UpdateProfileRequest requestDuplicatedEmail = UpdateProfileRequest.builder()
+                .username("mainuser")
+                .email("other@example.com")
+                .bio("Dup email")
+                .avatarPlaceholder("preset1")
+                .bannerPlaceholder("preset2")
+                .build();
+
+        mockMvc.perform(put("/api/users/profile")
+                        .header("Authorization", "Bearer " + mainUserToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDuplicatedEmail)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getUserProfile_whenEmailHidden_shouldReturnEmailToOwnerButNullToOthers() throws Exception {
+        // 1. Hide email for otherUser
+        otherUser.setShowEmail(false);
+        userRepository.save(otherUser);
+
+        // 2. MainUser gets otherUser's profile -> should return null email
+        mockMvc.perform(get("/api/users/" + otherUser.getId())
+                        .header("Authorization", "Bearer " + mainUserToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value(nullValue()));
+
+        // 3. OtherUser gets own profile -> should return actual email
+        mockMvc.perform(get("/api/users/" + otherUser.getId())
+                        .header("Authorization", "Bearer " + jwtService.generateToken(otherUser)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("other@example.com"));
     }
 }

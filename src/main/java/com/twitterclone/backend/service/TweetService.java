@@ -30,6 +30,8 @@ public class TweetService {
         }
         if ("replies".equalsIgnoreCase(filter)) {
             return tweetRepository.findUserReplies(userId, currentUser.getId(), pageable);
+        } else if ("likes".equalsIgnoreCase(filter)) {
+            return tweetRepository.findUserLikedTweets(userId, currentUser.getId(), pageable);
         } else if ("all".equalsIgnoreCase(filter)) {
             return tweetRepository.findUserTweetsAndReplies(userId, currentUser.getId(), pageable);
         } else {

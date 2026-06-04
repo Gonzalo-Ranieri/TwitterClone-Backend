@@ -57,16 +57,29 @@ public class DatabaseSeeder implements CommandLineRunner {
             {"cinefilo_max", "max@example.com", "Crítico de cine amateur. Hilos sobre películas infravaloradas."}
         };
 
+        String[] bannerPresets = {
+            "linear-gradient(135deg, var(--primary), #a855f7, #ec4899)",
+            "linear-gradient(135deg, #f97316, #facc15, #10b981)",
+            "linear-gradient(135deg, #06b6d4, #3b82f6, #6366f1)",
+            "linear-gradient(135deg, #14b8a6, #0f172a)",
+            "#1e293b"
+        };
+
+        int index = 0;
         for (String[] data : userData) {
+            String avatar = "https://api.dicebear.com/7.x/fun-emoji/svg?seed=" + data[0];
+            String banner = bannerPresets[index % bannerPresets.length];
             User user = User.builder()
                     .username(data[0])
                     .email(data[1])
                     .password(password)
                     .bio(data[2])
-                    .avatarPlaceholder("avatar_" + data[0] + ".png")
+                    .avatarPlaceholder(avatar)
+                    .bannerPlaceholder(banner)
                     .roles(Set.of(Role.USER))
                     .build();
             users.add(userRepository.save(user));
+            index++;
         }
 
         // Create tweets (at least 2 to 3 per user)

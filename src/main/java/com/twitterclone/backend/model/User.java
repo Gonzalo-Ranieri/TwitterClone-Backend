@@ -58,7 +58,16 @@ public class User implements UserDetails {
     @Column(length = 280)
     private String bio;
 
-    private String avatarPlaceholder;
+    @Builder.Default
+    private String avatarPlaceholder = "linear-gradient(135deg, #a855f7, var(--primary))";
+
+    @Column(length = 500)
+    @Builder.Default
+    private String bannerPlaceholder = "linear-gradient(135deg, var(--primary), #a855f7, #ec4899)";
+
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    @Builder.Default
+    private boolean showEmail = true;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
@@ -109,5 +118,30 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() {
         return true;
+    }
+
+    public String getAvatarPlaceholder() {
+        if (this.avatarPlaceholder == null || this.avatarPlaceholder.trim().isEmpty()) {
+            return "linear-gradient(135deg, #a855f7, var(--primary))";
+        }
+        return this.avatarPlaceholder;
+    }
+
+    public String getBannerPlaceholder() {
+        if (this.bannerPlaceholder == null || this.bannerPlaceholder.trim().isEmpty()) {
+            return "linear-gradient(135deg, var(--primary), #a855f7, #ec4899)";
+        }
+        return this.bannerPlaceholder;
+    }
+
+    @PrePersist
+    @PreUpdate
+    public void ensurePlaceholders() {
+        if (this.avatarPlaceholder == null || this.avatarPlaceholder.trim().isEmpty()) {
+            this.avatarPlaceholder = "linear-gradient(135deg, #a855f7, var(--primary))";
+        }
+        if (this.bannerPlaceholder == null || this.bannerPlaceholder.trim().isEmpty()) {
+            this.bannerPlaceholder = "linear-gradient(135deg, var(--primary), #a855f7, #ec4899)";
+        }
     }
 }

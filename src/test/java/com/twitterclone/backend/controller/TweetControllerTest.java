@@ -2,6 +2,7 @@ package com.twitterclone.backend.controller;
 
 import tools.jackson.databind.ObjectMapper;
 import com.twitterclone.backend.dto.TweetRequest;
+import com.twitterclone.backend.model.Like;
 import com.twitterclone.backend.model.Role;
 import com.twitterclone.backend.model.Tweet;
 import com.twitterclone.backend.model.User;
@@ -179,5 +180,66 @@ class TweetControllerTest {
                 .andExpect(status().isOk());
 
         assertTrue(likeRepository.findAll().isEmpty());
+    }
+
+    @Test
+    void getUserTweets_withFilters_shouldReturnCorrectTweets() throws Exception {
+        // 1. Original tweet by mainUser
+        Tweet originalTweet = Tweet.builder()
+                .content("Original Tweet")
+                .author(mainUser)
+                .build();
+        originalTweet = tweetRepository.save(originalTweet);
+
+        // 2. Reply tweet by mainUser
+        Tweet replyTweet = Tweet.builder()
+                .content("Reply Tweet")
+                .author(mainUser)
+                .parentTweet(originalTweet)
+                .build();
+        replyTweet = tweetRepository.save(replyTweet);
+
+        // 3. Other tweet liked by mainUser
+        Tweet otherTweet = Tweet.builder()
+                .content("Other User Tweet")
+                .author(otherUser)
+                .build();
+        otherTweet = tweetRepository.save(otherTweet);
+
+        Like like = Like.builder()
+                .user(mainUser)
+                .tweet(otherTweet)
+                .build();
+        likeRepository.save(like);
+
+        // Query default / posts filter -> should return only original tweet
+        mockMvc.perform(get("/api/users/" + mainUser.getId() + "/tweets")
+                        .header("Authorization", "Bearer " + mainUserToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].content", is("Original Tweet")));
+
+        // Query replies filter -> should return only reply tweet
+        mockMvc.perform(get("/api/users/" + mainUser.getId() + "/tweets")
+                        .header("Authorization", "Bearer " + mainUserToken)
+                        .param("filter", "replies"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].content", is("Reply Tweet")));
+
+        // Query likes filter -> should return only liked tweet
+        mockMvc.perform(get("/api/users/" + mainUser.getId() + "/tweets")
+                        .header("Authorization", "Bearer " + mainUserToken)
+                        .param("filter", "likes"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].content", is("Other User Tweet")));
+
+        // Query all filter -> should return both posts and replies (2 tweets)
+        mockMvc.perform(get("/api/users/" + mainUser.getId() + "/tweets")
+                        .header("Authorization", "Bearer " + mainUserToken)
+                        .param("filter", "all"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(2)));
     }
 }

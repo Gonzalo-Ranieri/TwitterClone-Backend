@@ -14,6 +14,8 @@ public class UserProfileResponse {
     private String email;
     private String bio;
     private String avatarPlaceholder;
+    private String bannerPlaceholder;
+    private boolean showEmail;
     private long followersCount;
     private long followingCount;
     private boolean followedByCurrentUser;

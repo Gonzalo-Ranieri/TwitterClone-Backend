@@ -5,8 +5,10 @@ import com.twitterclone.backend.service.FollowService;
 import com.twitterclone.backend.dto.FollowUserResponse;
 import com.twitterclone.backend.dto.UserProfileResponse;
 import com.twitterclone.backend.dto.UserSuggestionResponse;
+import com.twitterclone.backend.dto.UpdateProfileRequest;
 import com.twitterclone.backend.repository.FollowRepository;
 import com.twitterclone.backend.repository.UserRepository;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -42,12 +44,16 @@ public class UserController {
         long followersCount = followRepository.countByFollowingId(user.getId());
         boolean followedByCurrentUser = followRepository.existsByFollowerAndFollowing(currentUser, user);
 
+        String email = (user.getId().equals(currentUser.getId()) || user.isShowEmail()) ? user.getEmail() : null;
+
         return ResponseEntity.ok(UserProfileResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())
-                .email(user.getEmail())
+                .email(email)
                 .bio(user.getBio())
                 .avatarPlaceholder(user.getAvatarPlaceholder())
+                .bannerPlaceholder(user.getBannerPlaceholder())
+                .showEmail(user.isShowEmail())
                 .followersCount(followersCount)
                 .followingCount(followingCount)
                 .followedByCurrentUser(followedByCurrentUser)
@@ -126,5 +132,55 @@ public class UserController {
     ) {
         followService.unfollowUser(targetUserId, currentUser);
         return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<UserProfileResponse> updateProfile(
+            @Valid @RequestBody UpdateProfileRequest request,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        User user = userRepository.findById(currentUser.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+
+        // Check uniqueness of username if changed
+        if (!user.getUsername().equalsIgnoreCase(request.getUsername())) {
+            if (userRepository.existsByUsername(request.getUsername())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El nombre de usuario ya está en uso");
+            }
+            user.setUsername(request.getUsername());
+        }
+
+        // Check uniqueness of email if changed
+        if (!user.getEmail().equalsIgnoreCase(request.getEmail())) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El email ya está en uso");
+            }
+            user.setEmail(request.getEmail());
+        }
+
+        user.setBio(request.getBio());
+        String avatar = request.getAvatarPlaceholder() != null ? request.getAvatarPlaceholder().trim() : null;
+        user.setAvatarPlaceholder(avatar == null || avatar.isEmpty() ? null : avatar);
+        String banner = request.getBannerPlaceholder() != null ? request.getBannerPlaceholder().trim() : null;
+        user.setBannerPlaceholder(banner == null || banner.isEmpty() ? null : banner);
+        user.setShowEmail(request.isShowEmail());
+
+        User updatedUser = userRepository.save(user);
+
+        long followingCount = followRepository.countByFollowerId(updatedUser.getId());
+        long followersCount = followRepository.countByFollowingId(updatedUser.getId());
+
+        return ResponseEntity.ok(UserProfileResponse.builder()
+                .id(updatedUser.getId())
+                .username(updatedUser.getUsername())
+                .email(updatedUser.getEmail())
+                .bio(updatedUser.getBio())
+                .avatarPlaceholder(updatedUser.getAvatarPlaceholder())
+                .bannerPlaceholder(updatedUser.getBannerPlaceholder())
+                .showEmail(updatedUser.isShowEmail())
+                .followersCount(followersCount)
+                .followingCount(followingCount)
+                .followedByCurrentUser(false)
+                .build());
     }
 }

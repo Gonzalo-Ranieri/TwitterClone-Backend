@@ -1,6 +1,7 @@
 package com.twitterclone.backend.service;
 
 import com.twitterclone.backend.model.Like;
+import com.twitterclone.backend.model.NotificationType;
 import com.twitterclone.backend.model.Tweet;
 import com.twitterclone.backend.model.User;
 import com.twitterclone.backend.repository.LikeRepository;
@@ -19,6 +20,7 @@ public class LikeService {
 
     private final LikeRepository likeRepository;
     private final TweetRepository tweetRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public void likeTweet(UUID tweetId, User currentUser) {
@@ -35,6 +37,9 @@ public class LikeService {
                 .tweet(tweet)
                 .build();
         likeRepository.save(like);
+
+        // Notify the author of the tweet
+        notificationService.createNotification(tweet.getAuthor(), currentUser, NotificationType.LIKE, tweet.getId());
     }
 
     @Transactional

@@ -1,6 +1,7 @@
 package com.twitterclone.backend.service;
 
 import com.twitterclone.backend.model.Follow;
+import com.twitterclone.backend.model.NotificationType;
 import com.twitterclone.backend.model.User;
 import com.twitterclone.backend.repository.FollowRepository;
 import com.twitterclone.backend.repository.UserRepository;
@@ -18,6 +19,7 @@ public class FollowService {
 
     private final FollowRepository followRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public void followUser(UUID targetUserId, User currentUser) {
@@ -38,6 +40,9 @@ public class FollowService {
                 .following(targetUser)
                 .build();
         followRepository.save(follow);
+
+        // Notify the followed user
+        notificationService.createNotification(targetUser, currentUser, NotificationType.FOLLOW, null);
     }
 
     @Transactional

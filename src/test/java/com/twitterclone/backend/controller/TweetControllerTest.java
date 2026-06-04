@@ -1,6 +1,6 @@
 package com.twitterclone.backend.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.twitterclone.backend.dto.TweetRequest;
 import com.twitterclone.backend.model.Role;
 import com.twitterclone.backend.model.Tweet;

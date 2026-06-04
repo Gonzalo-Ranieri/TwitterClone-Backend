@@ -91,10 +91,11 @@ public class TweetController {
     @GetMapping("/users/{id}/tweets")
     public ResponseEntity<Page<TweetResponse>> getUserTweets(
             @PathVariable("id") UUID id,
+            @RequestParam(value = "filter", defaultValue = "posts") String filter,
             @AuthenticationPrincipal User currentUser,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        Page<TweetResponse> userTweets = tweetService.getUserTweets(id, currentUser, pageable);
+        Page<TweetResponse> userTweets = tweetService.getUserTweets(id, filter, currentUser, pageable);
         return ResponseEntity.ok(userTweets);
     }
 }

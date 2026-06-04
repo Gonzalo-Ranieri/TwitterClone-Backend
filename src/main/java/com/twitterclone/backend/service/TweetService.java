@@ -24,11 +24,17 @@ public class TweetService {
     private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
-    public Page<TweetResponse> getUserTweets(UUID userId, User currentUser, Pageable pageable) {
+    public Page<TweetResponse> getUserTweets(UUID userId, String filter, User currentUser, Pageable pageable) {
         if (!userRepository.existsById(userId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado");
         }
-        return tweetRepository.findUserTweetsAndReplies(userId, currentUser.getId(), pageable);
+        if ("replies".equalsIgnoreCase(filter)) {
+            return tweetRepository.findUserReplies(userId, currentUser.getId(), pageable);
+        } else if ("all".equalsIgnoreCase(filter)) {
+            return tweetRepository.findUserTweetsAndReplies(userId, currentUser.getId(), pageable);
+        } else {
+            return tweetRepository.findUserOriginalTweets(userId, currentUser.getId(), pageable);
+        }
     }
 
     @Transactional

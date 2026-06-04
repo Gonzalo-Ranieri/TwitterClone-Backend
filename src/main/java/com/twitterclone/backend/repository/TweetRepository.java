@@ -46,6 +46,32 @@ public interface TweetRepository extends JpaRepository<Tweet, UUID> {
            "(SELECT COUNT(l) FROM Like l WHERE l.tweet.id = t.id), " +
            "CASE WHEN (SELECT COUNT(l) FROM Like l WHERE l.tweet.id = t.id AND l.user.id = :currentUserId) > 0 THEN true ELSE false END, " +
            "t.replyCount, t.parentTweet.id) " +
+           "FROM Tweet t WHERE t.author.id = :userId AND t.parentTweet IS NULL " +
+           "ORDER BY t.createdAt DESC")
+    Page<TweetResponse> findUserOriginalTweets(
+            @Param("userId") UUID userId,
+            @Param("currentUserId") UUID currentUserId,
+            Pageable pageable
+    );
+
+    @Query("SELECT new com.twitterclone.backend.dto.TweetResponse(" +
+           "t.id, t.content, t.author.id, t.author.username, t.author.avatarPlaceholder, t.createdAt, " +
+           "(SELECT COUNT(l) FROM Like l WHERE l.tweet.id = t.id), " +
+           "CASE WHEN (SELECT COUNT(l) FROM Like l WHERE l.tweet.id = t.id AND l.user.id = :currentUserId) > 0 THEN true ELSE false END, " +
+           "t.replyCount, t.parentTweet.id) " +
+           "FROM Tweet t WHERE t.author.id = :userId AND t.parentTweet IS NOT NULL " +
+           "ORDER BY t.createdAt DESC")
+    Page<TweetResponse> findUserReplies(
+            @Param("userId") UUID userId,
+            @Param("currentUserId") UUID currentUserId,
+            Pageable pageable
+    );
+
+    @Query("SELECT new com.twitterclone.backend.dto.TweetResponse(" +
+           "t.id, t.content, t.author.id, t.author.username, t.author.avatarPlaceholder, t.createdAt, " +
+           "(SELECT COUNT(l) FROM Like l WHERE l.tweet.id = t.id), " +
+           "CASE WHEN (SELECT COUNT(l) FROM Like l WHERE l.tweet.id = t.id AND l.user.id = :currentUserId) > 0 THEN true ELSE false END, " +
+           "t.replyCount, t.parentTweet.id) " +
            "FROM Tweet t WHERE t.id = :tweetId")
     Optional<TweetResponse> findTweetByIdAndCurrentUser(
             @Param("tweetId") UUID tweetId,

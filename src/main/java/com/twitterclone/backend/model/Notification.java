@@ -9,7 +9,13 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "notifications")
+@Table(
+    name = "notifications",
+    indexes = {
+        @Index(name = "idx_notifications_receiver_id", columnList = "receiver_id"),
+        @Index(name = "idx_notifications_created_at", columnList = "createdAt")
+    }
+)
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter

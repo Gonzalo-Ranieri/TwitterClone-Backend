@@ -12,7 +12,14 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "tweets")
+@Table(
+    name = "tweets",
+    indexes = {
+        @Index(name = "idx_tweets_created_at", columnList = "createdAt"),
+        @Index(name = "idx_tweets_parent_id", columnList = "parent_id"),
+        @Index(name = "idx_tweets_author_id", columnList = "author_id")
+    }
+)
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter

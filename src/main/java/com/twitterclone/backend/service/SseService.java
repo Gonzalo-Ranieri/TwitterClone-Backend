@@ -66,6 +66,10 @@ public class SseService {
         }
     }
 
+    /**
+     * Returns the active {@link SseEmitter} for a given user ID.
+     * <p><em>Visible for testing only — do not call from production code.</em></p>
+     */
     public SseEmitter getEmitter(UUID userId) {
         return emitters.get(userId);
     }

@@ -13,4 +13,6 @@ public class TweetRequest {
     @NotBlank(message = "El contenido del tweet no puede estar vacío")
     @Size(max = 280, message = "El tweet no puede superar los 280 caracteres")
     private String content;
+
+    private java.util.UUID parentTweetId;
 }

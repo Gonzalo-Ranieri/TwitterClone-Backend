@@ -68,4 +68,23 @@ public class TweetController {
         Page<TweetResponse> timeline = tweetService.getTimeline(currentUser, pageable);
         return ResponseEntity.ok(timeline);
     }
+
+    @GetMapping("/tweets/{id}")
+    public ResponseEntity<TweetResponse> getTweet(
+            @PathVariable("id") UUID id,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        TweetResponse tweet = tweetService.getTweetById(id, currentUser);
+        return ResponseEntity.ok(tweet);
+    }
+
+    @GetMapping("/tweets/{id}/replies")
+    public ResponseEntity<Page<TweetResponse>> getReplies(
+            @PathVariable("id") UUID id,
+            @AuthenticationPrincipal User currentUser,
+            @PageableDefault(size = 20) Pageable pageable
+    ) {
+        Page<TweetResponse> replies = tweetService.getReplies(id, currentUser, pageable);
+        return ResponseEntity.ok(replies);
+    }
 }

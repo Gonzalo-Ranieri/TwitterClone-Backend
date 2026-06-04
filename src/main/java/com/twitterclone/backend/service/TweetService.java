@@ -23,9 +23,17 @@ public class TweetService {
 
     @Transactional
     public TweetResponse createTweet(TweetRequest request, User currentUser) {
+        Tweet parentTweet = null;
+        if (request.getParentTweetId() != null) {
+            parentTweet = tweetRepository.findById(request.getParentTweetId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tweet padre no encontrado"));
+            parentTweet.setReplyCount(parentTweet.getReplyCount() + 1);
+        }
+
         Tweet tweet = Tweet.builder()
                 .content(request.getContent())
                 .author(currentUser)
+                .parentTweet(parentTweet)
                 .build();
         Tweet savedTweet = tweetRepository.save(tweet);
         return TweetResponse.builder()
@@ -37,6 +45,8 @@ public class TweetService {
                 .createdAt(savedTweet.getCreatedAt())
                 .likeCount(0)
                 .liked(false)
+                .replyCount(0)
+                .parentTweetId(parentTweet != null ? parentTweet.getId() : null)
                 .build();
     }
 
@@ -49,7 +59,26 @@ public class TweetService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tienes permiso para eliminar este tweet");
         }
 
+        if (tweet.getParentTweet() != null) {
+            Tweet parent = tweet.getParentTweet();
+            parent.setReplyCount(Math.max(0, parent.getReplyCount() - 1));
+        }
+
         tweetRepository.delete(tweet);
+    }
+
+    @Transactional(readOnly = true)
+    public TweetResponse getTweetById(UUID tweetId, User currentUser) {
+        return tweetRepository.findTweetByIdAndCurrentUser(tweetId, currentUser.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tweet no encontrado"));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<TweetResponse> getReplies(UUID parentTweetId, User currentUser, Pageable pageable) {
+        if (!tweetRepository.existsById(parentTweetId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tweet no encontrado");
+        }
+        return tweetRepository.findReplies(parentTweetId, currentUser.getId(), pageable);
     }
 
     @Transactional(readOnly = true)

@@ -108,4 +108,58 @@ class UserControllerTest {
 
         assertFalse(followRepository.existsByFollowerAndFollowing(mainUser, otherUser));
     }
+
+    @Test
+    void getFollowers_shouldReturnPagedFollowers() throws Exception {
+        // otherUser follows mainUser
+        mockMvc.perform(post("/api/users/" + mainUser.getId() + "/follow")
+                        .header("Authorization", "Bearer " + jwtService.generateToken(otherUser)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/users/" + mainUser.getId() + "/followers")
+                        .header("Authorization", "Bearer " + mainUserToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].username").value(otherUser.getUsername()))
+                .andExpect(jsonPath("$.content[0].followedByCurrentUser").value(false));
+    }
+
+    @Test
+    void getFollowing_shouldReturnPagedFollowing() throws Exception {
+        // mainUser follows otherUser
+        mockMvc.perform(post("/api/users/" + otherUser.getId() + "/follow")
+                        .header("Authorization", "Bearer " + mainUserToken))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/users/" + mainUser.getId() + "/following")
+                        .header("Authorization", "Bearer " + mainUserToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].username").value(otherUser.getUsername()))
+                .andExpect(jsonPath("$.content[0].followedByCurrentUser").value(true));
+    }
+
+    @Test
+    void searchUsers_shouldReturnMatchingUsers() throws Exception {
+        // Create user with specific username to search
+        User searchUser = User.builder()
+                .email("search@example.com")
+                .username("specialname")
+                .bio("I love Java programming")
+                .password(passwordEncoder.encode("password123"))
+                .roles(Set.of(Role.USER))
+                .build();
+        userRepository.save(searchUser);
+
+        // Search by username
+        mockMvc.perform(get("/api/users/search?q=special")
+                        .header("Authorization", "Bearer " + mainUserToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].username").value("specialname"))
+                .andExpect(jsonPath("$[0].followedByCurrentUser").value(false));
+
+        // Search by bio case-insensitively
+        mockMvc.perform(get("/api/users/search?q=JAVA")
+                        .header("Authorization", "Bearer " + mainUserToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].username").value("specialname"));
+    }
 }

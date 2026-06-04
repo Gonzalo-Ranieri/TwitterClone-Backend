@@ -2,12 +2,16 @@ package com.twitterclone.backend.controller;
 
 import com.twitterclone.backend.model.User;
 import com.twitterclone.backend.service.FollowService;
+import com.twitterclone.backend.dto.FollowUserResponse;
 import com.twitterclone.backend.dto.UserProfileResponse;
 import com.twitterclone.backend.dto.UserSuggestionResponse;
 import com.twitterclone.backend.repository.FollowRepository;
 import com.twitterclone.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -48,6 +52,41 @@ public class UserController {
                 .followingCount(followingCount)
                 .followedByCurrentUser(followedByCurrentUser)
                 .build());
+    }
+
+    @GetMapping("/{id}/followers")
+    public ResponseEntity<Page<FollowUserResponse>> getFollowers(
+            @PathVariable("id") UUID id,
+            @AuthenticationPrincipal User currentUser,
+            @PageableDefault(size = 10) Pageable pageable
+    ) {
+        if (!userRepository.existsById(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado");
+        }
+        Page<FollowUserResponse> followers = followRepository.findFollowers(id, currentUser.getId(), pageable);
+        return ResponseEntity.ok(followers);
+    }
+
+    @GetMapping("/{id}/following")
+    public ResponseEntity<Page<FollowUserResponse>> getFollowing(
+            @PathVariable("id") UUID id,
+            @AuthenticationPrincipal User currentUser,
+            @PageableDefault(size = 10) Pageable pageable
+    ) {
+        if (!userRepository.existsById(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado");
+        }
+        Page<FollowUserResponse> following = followRepository.findFollowing(id, currentUser.getId(), pageable);
+        return ResponseEntity.ok(following);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<FollowUserResponse>> searchUsers(
+            @RequestParam("q") String query,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        List<FollowUserResponse> results = userRepository.searchUsers(query, currentUser.getId());
+        return ResponseEntity.ok(results);
     }
 
     @GetMapping("/suggestions")

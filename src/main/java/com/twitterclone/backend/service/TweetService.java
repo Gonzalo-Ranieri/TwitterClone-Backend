@@ -5,6 +5,7 @@ import com.twitterclone.backend.dto.TweetResponse;
 import com.twitterclone.backend.model.Tweet;
 import com.twitterclone.backend.model.User;
 import com.twitterclone.backend.repository.TweetRepository;
+import com.twitterclone.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +21,15 @@ import java.util.UUID;
 public class TweetService {
 
     private final TweetRepository tweetRepository;
+    private final UserRepository userRepository;
+
+    @Transactional(readOnly = true)
+    public Page<TweetResponse> getUserTweets(UUID userId, User currentUser, Pageable pageable) {
+        if (!userRepository.existsById(userId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado");
+        }
+        return tweetRepository.findUserTweetsAndReplies(userId, currentUser.getId(), pageable);
+    }
 
     @Transactional
     public TweetResponse createTweet(TweetRequest request, User currentUser) {

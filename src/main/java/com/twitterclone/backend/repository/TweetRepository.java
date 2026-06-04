@@ -20,10 +20,23 @@ public interface TweetRepository extends JpaRepository<Tweet, UUID> {
            "(SELECT COUNT(l) FROM Like l WHERE l.tweet.id = t.id), " +
            "CASE WHEN (SELECT COUNT(l) FROM Like l WHERE l.tweet.id = t.id AND l.user.id = :currentUserId) > 0 THEN true ELSE false END, " +
            "t.replyCount, t.parentTweet.id) " +
-           "FROM Tweet t WHERE t.parentTweet IS NULL AND t.author.id IN (SELECT f.following.id FROM Follow f WHERE f.follower.id = :followerId) " +
+           "FROM Tweet t WHERE t.parentTweet IS NULL AND (t.author.id = :currentUserId OR t.author.id IN (SELECT f.following.id FROM Follow f WHERE f.follower.id = :followerId)) " +
            "ORDER BY t.createdAt DESC")
     Page<TweetResponse> findTimelineTweets(
             @Param("followerId") UUID followerId,
+            @Param("currentUserId") UUID currentUserId,
+            Pageable pageable
+    );
+
+    @Query("SELECT new com.twitterclone.backend.dto.TweetResponse(" +
+           "t.id, t.content, t.author.id, t.author.username, t.author.avatarPlaceholder, t.createdAt, " +
+           "(SELECT COUNT(l) FROM Like l WHERE l.tweet.id = t.id), " +
+           "CASE WHEN (SELECT COUNT(l) FROM Like l WHERE l.tweet.id = t.id AND l.user.id = :currentUserId) > 0 THEN true ELSE false END, " +
+           "t.replyCount, t.parentTweet.id) " +
+           "FROM Tweet t WHERE t.author.id = :userId " +
+           "ORDER BY t.createdAt DESC")
+    Page<TweetResponse> findUserTweetsAndReplies(
+            @Param("userId") UUID userId,
             @Param("currentUserId") UUID currentUserId,
             Pageable pageable
     );
